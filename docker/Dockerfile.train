@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+
+# ---- Stage 1: base with pinned dependencies -------------------------------
+FROM python:3.11-slim AS base
+
+WORKDIR /app
+
+# Keep pip lean and deterministic; no compiler toolchain needed for the
+# CPU wheels used here, so we skip installing build-essential.
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+COPY requirements/train.txt ./requirements/train.txt
+RUN pip install --no-cache-dir -r requirements/train.txt
+
+# ---- Stage 2: training runtime ---------------------------------------------
+FROM base AS training
+
+COPY src/ ./src/
+COPY configs/ ./configs/
+
+ENV PYTHONUNBUFFERED=1 \
+    TRAIN_CONFIG_PATH=/app/configs/training_config.yaml
+
+# Mount points for training data and output checkpoints (bind-mounted or
+# backed by a PersistentVolumeClaim in Kubernetes).
+RUN mkdir -p /app/data /app/checkpoints
+
+# Run as a non-root user for defense in depth.
+RUN useradd --create-home --uid 1000 trainer && \
+    chown -R trainer:trainer /app
+USER trainer
+
+ENTRYPOINT ["python", "src/train.py"]
+
