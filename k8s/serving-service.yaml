@@ -1,1 +1,16 @@
-# TODO(feature/k8s-serving): ClusterIP Service exposing the serving Deployment.
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-serving
+  namespace: ml-training
+  labels:
+    app: model-serving
+spec:
+  type: ClusterIP
+  selector:
+    app: model-serving
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+
