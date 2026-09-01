@@ -13,12 +13,11 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from dataset import get_transforms
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from PIL import Image
-
-from dataset import get_transforms
 from model import get_model
+from PIL import Image
 
 CIFAR10_CLASSES = [
     "airplane", "automobile", "bird", "cat", "deer",

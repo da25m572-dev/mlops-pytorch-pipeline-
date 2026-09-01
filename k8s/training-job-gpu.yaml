@@ -1,6 +1,12 @@
-# PersistentVolumeClaims backing /app/data (CIFAR-10 download cache) and
-# /app/checkpoints (trained model output, later mounted read-only by the
-# serving Deployment).
+# Bonus (Part D, +5 pts): GPU-enabled variant of k8s/training-job.yaml.
+#
+# Apply this INSTEAD OF training-job.yaml on a cluster with GPU nodes
+# (e.g. a cloud-managed cluster with the NVIDIA device plugin installed).
+# It requests 1 GPU and constrains scheduling to GPU-labeled/tainted nodes.
+#
+#   kubectl apply -f k8s/namespace.yaml
+#   kubectl apply -f k8s/configmap.yaml
+#   kubectl apply -f k8s/training-job-gpu.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -28,7 +34,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: training-job
+  name: training-job-gpu
   namespace: ml-training
   labels:
     app: mlops-training
@@ -40,10 +46,14 @@ spec:
         app: mlops-training
     spec:
       restartPolicy: Never
+      nodeSelector:
+        accelerator: nvidia-gpu
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: trainer
-          # Built from docker/Dockerfile.train. Load into your cluster first,
-          # e.g. `minikube image load mlops-train:v1` or `kind load docker-image mlops-train:v1`.
           image: mlops-train:v1
           imagePullPolicy: IfNotPresent
           env:
@@ -53,9 +63,11 @@ spec:
             requests:
               cpu: "2"
               memory: "4Gi"
+              nvidia.com/gpu: 1
             limits:
               cpu: "2"
               memory: "4Gi"
+              nvidia.com/gpu: 1
           volumeMounts:
             - name: training-config
               mountPath: /app/configs
@@ -74,4 +86,3 @@ spec:
         - name: checkpoints
           persistentVolumeClaim:
             claimName: model-checkpoints-pvc
-

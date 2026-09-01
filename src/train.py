@@ -10,7 +10,6 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-
 from dataset import get_dataloaders
 from model import get_model
 
